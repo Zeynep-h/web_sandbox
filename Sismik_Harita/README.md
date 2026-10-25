@@ -12,13 +12,8 @@ Sismik Radar 3D, dünya genelindeki ve Türkiye'deki deprem aktivitelerini inter
 * **Modern Sci-Fi Arayüz:** Glassmorphism (cam efekti) tasarım dili ve karanlık tema uyumlu arayüz.
 
 ## 🛠️ Kullanılan Teknolojiler
-* **JavaScript (Vanilla ES6+):** Asenkron veri yönetimi, state mimarisi ve DOM manipülasyonu.
+* **JavaScript:** Asenkron veri yönetimi, state mimarisi ve DOM manipülasyonu.
 * **HTML5 & CSS3:** CSS Grid, Flexbox, özel değişkenler ve cam efekti tasarımı.
 * **Globe.GL:** Three.js tabanlı 3D küre ve sismik şok dalgası animasyonları.
 * **Leaflet.js:** 2D alternatif harita katmanları ve koordinat yönetimi.
 * **FontAwesome & Google Fonts:** Arayüz ikonografisi ve tipografi.
-
-## ⚙️ Kurulum & Çalıştırma
-Projeyi yerel bilgisayarınızda çalıştırmak için:
-1. Bu repository'yi klonlayın veya indirin.
-2. `index.html` dosyasını tarayıcınızda açın (Live Server eklentisi önerilir).
