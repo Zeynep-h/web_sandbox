@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SİSMİK RADAR // 3D Dünya Küresi & İl Bazlı Sismik Analiz Paneli</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Leaflet.js CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Globe.GL 3D Visualization Library -->
+  <script src="https://unpkg.com/globe.gl"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient Glowing Neon Orbs & Cyberpunk Grid Background -->
+  <div class="space-background">
+    <div class="grid-overlay"></div>
+    <div class="neon-orb orb-1"></div>
+    <div class="neon-orb orb-2"></div>
+    <div class="neon-orb orb-3"></div>
+    <div class="neon-orb orb-4"></div>
+  </div>
+
+  <!-- Loading Bar Indicator -->
+  <div id="top-loading-bar" class="loading-bar"></div>
+
+  <!-- Main Dashboard App Container -->
+  <div class="app-container">
+
+    <!-- Top Navigation / Header -->
+    <header class="app-header glass-panel">
+      <div class="header-left">
+        <div class="logo-box">
+          <div class="seismic-radar-icon">
+            <span class="ping-circle"></span>
+            <i class="fa-solid fa-satellite-dish"></i>
+          </div>
+          <div>
+            <h1 class="brand-title">SİSMİK<span class="brand-accent">RADAR</span> <span class="badge-3d">3D GLOBE</span></h1>
+            <p class="brand-subtitle">Anlık Dünya Deprem & Kandilli Modeli İl Bazlı Analiz Paneli</p>
+          </div>
+        </div>
+
+        <div class="live-status-pill">
+          <span class="pulse-dot"></span>
+          <span class="status-text">CANLI AKIŞ</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Quick Action Buttons -->
+        <button id="btn-audio-toggle" class="header-btn" title="Sismik Ses Efektlerini Aç/Kapat">
+          <i class="fa-solid fa-volume-xmark" id="audio-icon"></i>
+          <span class="btn-text">Ses: Kapalı</span>
+        </button>
+
+        <button id="btn-faults-toggle" class="header-btn active" title="Fay ve Levha Sınırlarını Aç/Kapat">
+          <i class="fa-solid fa-layer-group"></i>
+          <span class="btn-text">Fay Hatları</span>
+        </button>
+
+        <div class="refresh-container">
+          <button id="btn-refresh" class="header-btn refresh-btn" title="Verileri Şimdi Yenile">
+            <i class="fa-solid fa-rotate" id="refresh-icon"></i>
+            <span class="btn-text">Yenile</span>
+          </button>
+          <span id="countdown-badge" class="countdown-badge" title="Otomatik yenilemeye kalan süre">60s</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top Filter & Control Panel -->
+    <section class="filter-panel glass-panel">
+      <div class="filter-group">
+        <label for="time-range-select" class="filter-label">
+          <i class="fa-regular fa-clock"></i> Zaman Aralığı
+        </label>
+        <div class="select-wrapper">
+          <select id="time-range-select" class="custom-select">
+            <option value="all_day" selected>Son 24 Saat (Önerilen)</option>
+            <option value="all_week">Son 7 Gün</option>
+          </select>
+          <i class="fa-solid fa-chevron-down select-arrow"></i>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label for="region-select" class="filter-label">
+          <i class="fa-solid fa-earth-americas"></i> Ülke & Bölge Odaklanma
+        </label>
+        <div class="select-wrapper">
+          <select id="region-select" class="custom-select highlight-select">
+            <option value="all">🌍 Tümü (Dünya Geneli)</option>
+            <option value="turkey" selected>🇹🇷 Türkiye ve Yakın Çevre</option>
+          </select>
+          <i class="fa-solid fa-chevron-down select-arrow"></i>
+        </div>
+      </div>
+
+      <div class="filter-group magnitude-pills-group">
+        <span class="filter-label">
+          <i class="fa-solid fa-chart-line"></i> Minimum Büyüklük (M)
+        </span>
+        <div class="magnitude-pills" id="magnitude-pills">
+          <button class="pill-btn active" data-mag="0">Tümü (M 0+)</button>
+          <button class="pill-btn" data-mag="2.5">M 2.5+</button>
+          <button class="pill-btn" data-mag="4.5">M 4.5+</button>
+          <button class="pill-btn danger-pill" data-mag="6.0">M 6.0+ (Kritik)</button>
+        </div>
+      </div>
+
+      <div class="filter-group search-group">
+        <label for="search-input" class="filter-label">
+          <i class="fa-solid fa-magnifying-glass"></i> Hızlı Arama
+        </label>
+        <div class="search-input-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="search-input" placeholder="İl, ilçe veya ülke ara... (Örn: Kahramanmaraş, Feke, Tokyo)" autocomplete="off">
+          <button id="btn-clear-search" class="clear-search-btn" title="Temizle">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Seismic Insight Panel -->
+    <section class="ai-insight-panel glass-panel" style="margin-bottom: 14px; padding: 12px 18px; display: flex; gap: 14px; align-items: center; border-color: rgba(168, 85, 247, 0.4);">
+      <div class="ai-icon-box" style="font-size: 24px; color: #c084fc; text-shadow: 0 0 10px rgba(168, 85, 247, 0.6); animation: pulseIcon 2s infinite;">
+        <i class="fa-solid fa-microchip"></i>
+      </div>
+      <div class="ai-content" style="flex: 1;">
+        <div style="font-size: 11px; color: #d8b4fe; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px;">AI SİSMİK DURUM ÖZETİ</div>
+        <div id="ai-summary-text" style="font-size: 13px; color: #f1f5f9; line-height: 1.5; font-family: var(--font-mono);">
+          Veriler analiz ediliyor...
+        </div>
+      </div>
+      <button onclick="generateAISummary()" class="map-action-btn active" style="font-size: 11px;">
+        <i class="fa-solid fa-arrows-rotate"></i> Yeniden Analiz Et
+      </button>
+    </section>
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="kpi-grid">
+      <div class="kpi-card glass-panel" id="kpi-total-card">
+        <div class="kpi-icon-box cyan-glow">
+          <i class="fa-solid fa-wave-square"></i>
+        </div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="kpi-title">Toplam Deprem</span>
+            <span class="kpi-badge cyan" id="active-region-badge">Türkiye</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpi-total-count">-</span>
+            <span class="kpi-unit">olay</span>
+          </div>
+          <p class="kpi-caption" id="kpi-total-caption">Veriler yükleniyor...</p>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel" id="kpi-max-card">
+        <div class="kpi-icon-box red-glow">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="kpi-title">En Büyük Deprem</span>
+            <span class="kpi-badge red" id="kpi-max-time">-</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value highlight-red" id="kpi-max-mag">-</span>
+            <span class="kpi-unit">M</span>
+          </div>
+          <p class="kpi-caption text-truncate" id="kpi-max-place">-</p>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel" id="kpi-latest-card">
+        <div class="kpi-icon-box orange-glow">
+          <i class="fa-solid fa-bolt-lightning"></i>
+        </div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="kpi-title">En Son Deprem</span>
+            <span class="kpi-badge orange" id="kpi-latest-ago">-</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value highlight-orange" id="kpi-latest-mag">-</span>
+            <span class="kpi-unit">M</span>
+          </div>
+          <p class="kpi-caption text-truncate" id="kpi-latest-place">-</p>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel" id="kpi-depth-card">
+        <div class="kpi-icon-box purple-glow">
+          <i class="fa-solid fa-arrows-down-to-line"></i>
+        </div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="kpi-title">Ortalama Büyüklük & Derinlik</span>
+            <span class="kpi-badge purple">Sismik Ort.</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value highlight-purple" id="kpi-avg-mag">-</span>
+            <span class="kpi-subvalue" id="kpi-avg-depth">-</span>
+          </div>
+          <p class="kpi-caption" id="kpi-depth-caption">-</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Layout (Visualizer Column + Sidebar Feed) -->
+    <main class="main-layout">
+
+      <!-- Left Visualizer & Analysis Column -->
+      <div class="visualizer-column">
+
+        <!-- 3D Globe & Map Container Panel (Compact Max Height: 400px) -->
+        <section class="visualizer-panel glass-panel">
+
+          <!-- Floating Quick Controls -->
+          <div class="map-floating-bar">
+            <!-- View Mode Switcher: 3D Globe vs 2D Map -->
+            <div class="view-mode-selector">
+              <button id="btn-view-globe" class="layer-pill active" title="3D İnteraktif Dünya Küresi">
+                <i class="fa-solid fa-globe"></i> 3D Küre
+              </button>
+              <button id="btn-view-map" class="layer-pill" title="2D Düz Harita">
+                <i class="fa-solid fa-map"></i> 2D Harita
+              </button>
+            </div>
+
+            <!-- Quick Focus Buttons -->
+            <div class="map-view-actions">
+              <button id="btn-quick-turkey" class="map-action-btn highlight" title="Türkiye'ye Yaklaş ve Odaklan">
+                <i class="fa-solid fa-location-crosshairs"></i> 🇹🇷 Türkiye
+              </button>
+              <button id="btn-quick-world" class="map-action-btn" title="Dünya Geneline Dön">
+                <i class="fa-solid fa-earth-americas"></i> Dünya
+              </button>
+            </div>
+
+            <!-- 3D Globe Controls (Rotate / Seismic Waves) -->
+            <div class="globe-controls" id="globe-controls-box">
+              <button id="btn-toggle-rotate" class="map-action-btn active" title="Küre Otomatik Dönüşünü Aç/Kapat">
+                <i class="fa-solid fa-rotate"></i>
+                <span id="rotate-btn-text" class="desktop-only">Dönüş: Açık</span>
+              </button>
+              <button id="btn-toggle-rings" class="map-action-btn active" title="Sismik Şok Dalgalarını Aç/Kapat">
+                <i class="fa-solid fa-water"></i>
+                <span class="desktop-only">Şok Dalgaları</span>
+              </button>
+            </div>
+
+            <!-- 2D Basemap Selector (Visible only when 2D map active) -->
+            <div class="map-layer-selector hidden" id="map-layer-box">
+              <button id="btn-basemap-dark" class="layer-pill active" title="Koyu Mod">Koyu</button>
+              <button id="btn-basemap-satellite" class="layer-pill" title="Uydu Görünümü">Uydu</button>
+              <button id="btn-basemap-light" class="layer-pill" title="Açık Mod">Açık</button>
+            </div>
+
+            <div class="map-extra-actions">
+              <button id="btn-map-fullscreen" class="map-action-btn icon-only" title="Tam Ekran Yap">
+                <i class="fa-solid fa-expand"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- 1. The 3D Interactive Globe Container (Globe.GL) - Max Height 400px -->
+          <div id="globe-container" class="globe-viewport"></div>
+
+          <!-- 2. The 2D Leaflet Map Container (Toggled via switch) -->
+          <div id="map-container" class="map-viewport hidden">
+            <div id="map"></div>
+          </div>
+
+          <!-- Floating Glass Legend (Bottom-Left) -->
+          <div class="map-legend glass-panel">
+            <div class="legend-header">
+              <span><i class="fa-solid fa-circle-info"></i> Sismik Lejant</span>
+              <button id="btn-toggle-legend" class="legend-minimize-btn" title="Gizle/Göster">
+                <i class="fa-solid fa-minus"></i>
+              </button>
+            </div>
+            <div class="legend-content" id="legend-content">
+              <div class="legend-section">
+                <span class="legend-subheading">Büyüklük (Richter):</span>
+                <div class="legend-scale">
+                  <div class="scale-item"><span class="color-dot dot-green"></span> &lt; 3.0 (Mikro)</div>
+                  <div class="scale-item"><span class="color-dot dot-yellow"></span> 3.0 - 4.4 (Hafif)</div>
+                  <div class="scale-item"><span class="color-dot dot-orange"></span> 4.5 - 5.9 (Orta)</div>
+                  <div class="scale-item"><span class="color-dot dot-red pulse"></span> 6.0+ (Şiddetli)</div>
+                </div>
+              </div>
+              <div class="legend-section">
+                <span class="legend-subheading">3D Görselleştirme:</span>
+                <div class="legend-scale">
+                  <div class="scale-item"><span class="legend-ring-dot"></span> Sismik Yayılım Dalgası</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading Spinner Overlay -->
+          <div id="map-loader" class="map-loader hidden">
+            <div class="loader-spinner"></div>
+            <p class="loader-text">3D Sismik Veriler Eşzamanlanıyor...</p>
+          </div>
+        </section>
+
+        <section class="bottom-feed-panel glass-panel" style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+          <div class="feed-header-bar" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; background: transparent;">
+            <h3 class="province-title" style="font-size: 15px; font-weight: 700; color: #fff; margin: 0;">
+              <i class="fa-solid fa-list-ul" style="color: var(--accent-cyan); margin-right: 8px;"></i> Tüm Deprem Kayıtları Akışı
+            </h3>
+            <div style="display: flex; gap: 20px; align-items: center;">
+              <div class="feed-count-info" style="font-size: 12px; color: var(--text-muted);"><span id="feed-list-count" style="color: #fff; font-weight: 700; font-family: var(--font-mono);">0</span> deprem listeleniyor</div>
+              <div class="feed-sort-box" style="display: flex; gap: 6px; align-items: center;">
+                <label for="feed-sort-select" style="color: var(--text-muted);"><i class="fa-solid fa-arrow-down-wide-short"></i></label>
+                <select id="feed-sort-select" class="sort-select" style="background: rgba(10,15,28,0.8); border: 1px solid var(--border-glass); color: #fff; padding: 4px; border-radius: 4px;">
+                  <option value="time_desc">En Yeni</option>
+                  <option value="mag_desc">En Büyük</option>
+                  <option value="mag_asc">En Küçük</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="earthquake-list-container" id="earthquake-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; max-height: 450px; overflow-y: auto; padding: 4px 8px 4px 0;">
+            <!-- Yüklenme animasyonu -->
+            <div class="feed-loader" id="feed-loading-state" style="grid-column: 1 / -1; min-height: 150px;">
+              <div class="feed-radar-spinner"><i class="fa-solid fa-satellite-dish"></i></div>
+              <p class="feed-loader-text">Sismik veriler yükleniyor...</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right Sidebar Panel: Sismik Analiz -->
+      <aside class="sidebar-panel glass-panel">
+        <div class="analytics-container" id="pane-analytics" style="height: 100%; display: flex; flex-direction: column;">
+          <div class="analytics-card">
+            <h4 class="analytics-title"><i class="fa-solid fa-chart-column"></i> Büyüklük Dağılımı</h4>
+            <div class="distribution-bars" id="magnitude-distribution"></div>
+          </div>
+
+          <div class="analytics-card">
+            <h4 class="analytics-title"><i class="fa-solid fa-layer-group"></i> Derinlik Sınıflandırması</h4>
+            <div class="depth-distribution-grid" id="depth-distribution"></div>
+          </div>
+
+          <div class="analytics-card">
+            <h4 class="analytics-title"><i class="fa-solid fa-atom"></i> Tahmini Açığa Çıkan Enerji</h4>
+            <div class="energy-box">
+              <div class="energy-value" id="total-energy-val">-</div>
+              <div class="energy-unit">GigaJoule (GJ) Sismik Enerji</div>
+              <p class="energy-comparison" id="energy-comparison-text">Hesaplanıyor...</p>
+            </div>
+          </div>
+
+          <div class="analytics-card">
+            <h4 class="analytics-title"><i class="fa-solid fa-shield-heart"></i> Tsunami ve Hissedilme</h4>
+            <div class="safety-summary-grid">
+              <div class="safety-metric">
+                <span class="safety-label">Tsunami Uyarısı</span>
+                <span class="safety-val" id="tsunami-alert-count">0</span>
+              </div>
+              <div class="safety-metric">
+                <span class="safety-label">Hissedilen Deprem</span>
+                <span class="safety-val" id="felt-earthquake-count">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Footer Bar -->
+    <footer class="app-footer glass-panel">
+      <div class="footer-left">
+        <span><i class="fa-solid fa-database"></i> Veri Kaynağı: Kandilli Rasathanesi (Canlı Akış) &bull; 3D Engine: Globe.GL</span>
+      </div>
+      <div class="footer-center">
+        <span id="footer-last-updated"><i class="fa-regular fa-clock"></i> Son Güncelleme: Bekleniyor...</span>
+      </div>
+      <div class="footer-right">
+        <span>SİSMİK RADAR v3.0 &bull; 3D Geospatial Intelligence & Kandilli Analytics</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Earthquake Detail Modal (Glassmorphic) -->
+  <div id="detail-modal" class="modal-overlay hidden">
+    <div class="modal-card glass-panel">
+      <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+      <div class="modal-header">
+        <div class="modal-mag-badge" id="modal-mag">M -</div>
+        <div>
+          <h3 class="modal-title" id="modal-place">Deprem Konumu</h3>
+          <p class="modal-time" id="modal-time">Zaman</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-stats-grid">
+          <div class="modal-stat-item">
+            <span class="modal-stat-label">Derinlik</span>
+            <span class="modal-stat-val" id="modal-depth">- km</span>
+          </div>
+          <div class="modal-stat-item">
+            <span class="modal-stat-label">Koordinatlar</span>
+            <span class="modal-stat-val" id="modal-coords">- , -</span>
+          </div>
+          <div class="modal-stat-item">
+            <span class="modal-stat-label">Önem Derecesi (Sig)</span>
+            <span class="modal-stat-val" id="modal-sig">-</span>
+          </div>
+          <div class="modal-stat-item">
+            <span class="modal-stat-label">Tsunami Tehlikesi</span>
+            <span class="modal-stat-val" id="modal-tsunami">Yok</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <a id="modal-usgs-link" href="#" target="_blank" rel="noopener" class="modal-action-btn primary">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> USGS Resmi Sayfasında İncele
+          </a>
+          <button id="modal-focus-btn" class="modal-action-btn secondary">
+            <i class="fa-solid fa-bullseye"></i> Kürede / Haritada Odaklan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Leaflet.js JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
